@@ -81,25 +81,25 @@ public class LocalNotificationRegisterFetch {
     private var onSuccessClosure: ((Void) -> Void)? = nil
     private var onFailureClosure: ((Void) -> Void)? = nil
     
-    @discardableResult func onSuccess(success: @escaping (Void) -> Void) -> Self {
+    @discardableResult public func onSuccess(success: @escaping (Void) -> Void) -> Self {
         onSuccessClosure = success
         return self
     }
-    
-    @discardableResult func onFailure(error: @escaping (Void) -> Void) -> Self {
+
+    @discardableResult public func onFailure(error: @escaping (Void) -> Void) -> Self {
         onFailureClosure = error
         return self
     }
     
     final fileprivate func doSuccess() {
         if let success = onSuccessClosure {
-            success()
+            success(())
         }
     }
     
     final fileprivate func doFailure() {
         if let failure = onFailureClosure {
-            failure()
+            failure(())
         }
     }
 }

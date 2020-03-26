@@ -47,7 +47,7 @@ public class LocalNotificationSchedulerNewestiOS: LocalNotificationScheduler {
         content.title = title
         content.body = message
         content.categoryIdentifier = categoryIdentifier
-        content.sound = UNNotificationSound.default()
+        content.sound = UNNotificationSound.default
         
         let center = UNUserNotificationCenter.current()
         center.add(generateNotificationRequest(content: content, date: date))
@@ -77,12 +77,17 @@ public class LocalNotificationSchedulerLegacyiOS: LocalNotificationScheduler {
     public required init(categoryIdentifier: String) {
         self.categoryIdentifier = categoryIdentifier
     }
-    
+
     public func schedule(title: String, message: String, date: Date) {
+        schedule(title: title, message: message, date: date, repeatInterval: .day)
+    }
+
+    public func schedule(title: String, message: String, date: Date, repeatInterval: NSCalendar.Unit = .day) {
         let localNotification = UILocalNotification()
         notifications.append(localNotification)
         
         localNotification.fireDate = date
+        localNotification.repeatInterval = repeatInterval
         localNotification.timeZone = TimeZone.current
         localNotification.alertTitle = title
         localNotification.alertBody = message
