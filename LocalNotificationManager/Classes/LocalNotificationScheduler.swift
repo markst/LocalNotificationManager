@@ -10,39 +10,36 @@ import UserNotifications
 import UIKit
 
 public protocol LocalNotificationScheduler {
-    init(categoryIdentifier: String)
-    func schedule(title: String, message: String, date: Date)
+    init()
+    func schedule(title: String, message: String, date: Date, repeats: Bool, categoryIdentifier: String)
     func schedule(title: String, message: String)
-    func cleanNotifications()
+    func cleanNotifications(identifiers: [String]?)
 }
 
 extension LocalNotificationScheduler {
     public func schedule(title: String, message: String) {
         let calendar = Calendar.current
         let date = calendar.date(byAdding: .second, value: 10, to: Date()) ?? Date()
-        schedule(title: title, message: message, date: date)
+        schedule(title: title, message: message, date: date, repeats: false, categoryIdentifier: NSUUID().uuidString)
     }
 }
 
 public class LocalNotificationSchedulerFactory {
-    static func instantiate(categoryIdentifier: String) -> LocalNotificationScheduler {
+    static func instantiate() -> LocalNotificationScheduler {
         if #available(iOS 10, *) {
-            return LocalNotificationSchedulerNewestiOS(categoryIdentifier: categoryIdentifier)
+            return LocalNotificationSchedulerNewestiOS()
         }
-        return LocalNotificationSchedulerLegacyiOS(categoryIdentifier: categoryIdentifier)
+        return LocalNotificationSchedulerLegacyiOS()
     }
 }
 
 @available(iOS 10.0, *)
 public class LocalNotificationSchedulerNewestiOS: LocalNotificationScheduler {
-    
-    let categoryIdentifier: String
-    
-    public required init(categoryIdentifier: String) {
-        self.categoryIdentifier = categoryIdentifier
+
+    public required init() {
     }
     
-    public func schedule(title: String, message: String, date: Date) {
+    public func schedule(title: String, message: String, date: Date, repeats: Bool, categoryIdentifier: String) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = message
@@ -50,20 +47,24 @@ public class LocalNotificationSchedulerNewestiOS: LocalNotificationScheduler {
         content.sound = UNNotificationSound.default
         
         let center = UNUserNotificationCenter.current()
-        center.add(generateNotificationRequest(content: content, date: date))
+        center.add(generateNotificationRequest(content: content, date: date, repeats: repeats, categoryIdentifier: categoryIdentifier))
     }
     
-    func generateNotificationRequest(content: UNMutableNotificationContent, date: Date) -> UNNotificationRequest {
+    func generateNotificationRequest(content: UNMutableNotificationContent, date: Date, repeats: Bool, categoryIdentifier: String) -> UNNotificationRequest {
         var dateComponents = DateComponents()
         dateComponents.hour = date.hour
         dateComponents.minute = date.minute
         
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: repeats)
         return UNNotificationRequest(identifier: categoryIdentifier, content: content, trigger: trigger)
     }
     
-    public func cleanNotifications() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [categoryIdentifier])
+    public func cleanNotifications(identifiers: [String]?) {
+        if let identifiers = identifiers {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
+        } else {
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        }
     }
 }
 
@@ -71,18 +72,15 @@ public class LocalNotificationSchedulerNewestiOS: LocalNotificationScheduler {
 public class LocalNotificationSchedulerLegacyiOS: LocalNotificationScheduler {
     
     fileprivate var notifications = [UILocalNotification]()
-    
-    let categoryIdentifier: String
-    
-    public required init(categoryIdentifier: String) {
-        self.categoryIdentifier = categoryIdentifier
+
+    public required init() {
     }
 
-    public func schedule(title: String, message: String, date: Date) {
-        schedule(title: title, message: message, date: date, repeatInterval: .day)
+    public func schedule(title: String, message: String, date: Date, repeats: Bool, categoryIdentifier: String) {
+        schedule(title: title, message: message, date: date, repeatInterval: repeats ? .day : .init(rawValue: 0), categoryIdentifier: categoryIdentifier)
     }
 
-    public func schedule(title: String, message: String, date: Date, repeatInterval: NSCalendar.Unit = .day) {
+    public func schedule(title: String, message: String, date: Date, repeatInterval: NSCalendar.Unit, categoryIdentifier: String) {
         let localNotification = UILocalNotification()
         notifications.append(localNotification)
         
@@ -96,7 +94,10 @@ public class LocalNotificationSchedulerLegacyiOS: LocalNotificationScheduler {
         UIApplication.shared.scheduleLocalNotification(localNotification)
     }
     
-    public func cleanNotifications() {
+    public func cleanNotifications(identifiers: [String]?) {
+        if identifiers == nil {
+            UIApplication.shared.cancelAllLocalNotifications()
+        }
         for notification in notifications {
             UIApplication.shared.cancelLocalNotification(notification)
         }
