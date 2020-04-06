@@ -51,9 +51,13 @@ public class LocalNotificationSchedulerNewestiOS: LocalNotificationScheduler {
     }
     
     func generateNotificationRequest(content: UNMutableNotificationContent, date: Date, repeats: Bool, categoryIdentifier: String) -> UNNotificationRequest {
-        var dateComponents = DateComponents()
-        dateComponents.hour = date.hour
-        dateComponents.minute = date.minute
+        let dateComponents: DateComponents
+        if repeats {
+            // Only supports repeating daily
+            dateComponents = Calendar.current.dateComponents([.hour, .minute], from: date)
+        } else {
+            dateComponents = Calendar.current.dateComponents([.hour, .minute, .day], from: date)
+        }
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: repeats)
         return UNNotificationRequest(identifier: categoryIdentifier, content: content, trigger: trigger)
